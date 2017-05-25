@@ -1,0 +1,202 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+	<meta charset="UTF-8" />
+	<title>Phaser - Making your first game, part 1</title>
+	<script type="text/javascript" src="js/phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+
+function preload() {
+	game.load.image('sky', 'assets/sky.png');
+	game.load.image('ground', 'assets/platform.png');
+	game.load.image('star', 'assets/star.png');
+	game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+}
+
+var platforms;
+var player; //I don't know if this needs to be out here, but I'm guessing it does for now...
+var cursors; //I had to look at the downloaded example to know that this is needed here, BECAUSE THE TUTORIAL DOESN'T SPECIFY THIS
+var stars; //see above
+var score = 0;
+var scoreText;
+
+function create() {
+	// enable Arcade Physics engine
+	game.physics.startSystem(Phaser.Physics.ARCADE);
+
+	// add a background (which is a sprite for some reason)
+	// also, it's worth noting that a presumably larger image is placed at coordinates
+	// that should be (for starters) on the top left of the screen
+	game.add.sprite(0, 0, 'sky');
+
+	// I don't know what 'gropus' are in phaser's context yet, but apparently the platforms (a.k.a. the things to stand on) need to be in a group.
+	platforms = game.add.group();
+
+	// in addition to enabling physics generally, it has to be actively enabled for the platforms...
+	platforms.enableBody = true; //also, this command is vague...it doesn't say anything about physics...
+
+	// Establish the ground...
+	var ground = platforms.create(0, game.world.height - 64, 'ground');
+	// I guess game.world.height refers to the canvas size? The tutorial says the game world is infinite...
+	// also, why did platforms have to be declared outside the create function, while the ground variable is
+	// declared here?
+
+	// I though the 64 above was based on the size of the image being used, but this next line is supposed to 
+	// "scale it to fit the width of the game (the original sprite is 400x32 in size)"
+	ground.scale.setTo(2, 2);
+
+	// the tutorial says something about preventing the ground from moving when you jump on it, but I think it's 
+	// simpler to just say that we're anchoring it.
+	ground.body.immovable = true;
+	// as an update, I tried making this false for one of the platforms with no effect, so maybe it would move if bumped, but not otherwise? There's no evident gravity, I guess.
+
+	// the ledges are also declared locally in the create function, so I'm still wondering why the platform had to be declared outside it.
+	var ledge = platforms.create(400, 400, 'ground');
+	//several questions here. the tutorial says this greates two ledges...how is that? and if we've previously set ground to be bigger than it was, and immovable, do those properties carry forth with nnew instances? Maybe not, since we've got "ground" and "ledge" as two things...
+
+	ledge.body.immovable = true; //here's the 'body' thing again...what effect would it have to *not* have a body, since we're turning it on and then locking it down anyway?
+
+	ledge = platforms.create(-150, 250, 'ground');
+	// hmmm... ok, so here's the second platform, I guess. If 0,0, is the top left corner, and 400, 400 is on screen somewhere (incidentally, that shouldn't be on the side, right?) then isn't a negative number off the screen?
+
+	ledge.body.immovable = false; //I'm really getting lost now...ledge was created (or defined) twice? How are these two ledges supposed to exist together?
+
+	// Hmm... ok, so, as I see it right now, platforms is a collected thing (it consists of several objects). decalring ledge like this basically works out to "add another object in the platform group, and use ledge as a pointer to it." That way, defining ledge a second time doesn't get rid of the first one, but it does remove access to it. I predict that there's a way to reference individual objects in a group that will come up later...
+	game.add.sprite(0, 0, 'star');
+
+	//insert a new sprite for the player
+	player = game.add.sprite(32, game.world.height - 150, 'dude');
+
+	//turn on physics (again)
+	game.physics.arcade.enable(player); //why did this take a different form?
+
+	// adjust player's physics
+	player.body.bounce.y = 0.2;
+	player.body.gravity.y = 300;
+	player.body.collideWorldBounds = true;
+
+	//add walking animtations
+	player.animations.add('left', [0, 1, 2, 3], 10, true);
+	player.animations.add('right', [5, 6, 7, 8], 10, true);
+	//ok, what happened to 4? I'm guessing these are indicies of a gif or something....
+	// The tutorial calls it a 'sprite sheet,' so I think the 32 and 48 were tellling it how to crop the image into a set of images to use for this purpose. Also, the 4 appears to be the "look at the camera" cell. It also mentions that phaser "supports flipping sprites to save on animation frames," but doesn't go ino it here. The 10 indicates 10 frames per second, and 'true' means it should loop.
+
+	// Apparently there are multiple physics engines built in to phaser, though the tutorial doesn't specify the differences between them. The one used in this example gives sprites a "new body property," which is ambiguous enough that I'm not sure if it means that it gives it "body" property (implying that it didn't have one before), or a NEW body property (as in, an additional property).
+
+	// As for gravity, the 300 assigned above is arbitrary, but the tutorial states that "the higher the value, the heavier your object feels and the quicker it falls," which indicates that the "arcade physics" differs notably from real physics. I don't yet know if there's an acceleration component here.
+
+	/* Oddly, there is *some* physics involved here, since the tutorial
+	goes on to say that if the ledges weren't set as immovable, colliding with them would result in the "...force of the collision [being] applied to the ground, therefore, the two bodies exchange velocities and the ground starts falling as well."
+	*/
+
+	// enable keyboard control
+	// I'll give phaser a point for including keyboard input without
+	// a lot of extra hassle involving listeners, but it might lose that point quickly, depending on how complicated it is to do other things....
+	cursors = game.input.keyboard.createCursorKeys();
+	// ^ This "populates the cursors object with four properties: up, down, left, right, that are all instances of the Phaser.Key objects."
+
+	stars = game.add.group(); //just like the platforms, but a separate grouping...
+	stars.enableBody = true; // physics?
+
+	//loop to create 12 stars.
+
+	for (var i = 0; i < 12; i++)
+	{
+		// make a star
+		var star = stars.create(i * 70, 0, 'star');
+
+		// enable gravity
+		star.body.gravity.y = 300;
+
+		// make it bounce, with each star a little differenct...
+		star.body.bounce.y = 0.7 + Math.random() * 0.2;
+	}
+	// I think I follow how this equates to making an array of stars, but how are they referenced afterwrds? Maybe there's a 'this' sort of means to refer to them when something relevant happens later...
+	// Hmm...so this isn't working the way it should. It's only drawing one star (unless they're all on top of each other), and the code appears to be the exact same as the sample which works. The only difference (aside from my comments) is that the keyboard control statement is placed after the stars, but when I do that all I get is a black screen, so something's amiss. Also, the tutorial lists the graivty for the stars at 6, while the saple code has it at 300, so I think the tutorial missed something.
+
+	// Add text to the screen, at coordinates 16, 16, black color, 32 pixels high
+	scoreText = game.add.text(16, 16, 'score: 0', {fontSize: '32px', fill: '#000'});
+
+}
+
+function update() {
+	// This appears to work similarly to the Arduino code, in that the first part establishes variables and settings, while a second function (this one, here) simply loops continuously.
+	// Interestingly, collision is managed here, but not whether something can or cannot be collided with... In other words, according to the tutorial a sprite can be set as "immovable," meaning it will be fixed in place, while otherwise it would be susceptible to motion--my question, though, is of solidity; does an immovable object equate to intangible, or can things be solid and immovable? What about one-way traversal (like so many platformers used to do)?
+
+	var hitPlatform = game.physics.arcade.collide(player, platforms);
+	// Again, several questions here. Among them, what's the difference between arcade and ARCADE, and the other various capitalization inconsistencies? Does this command tell the game to check for any collisions between any instances of players and platforms? I would imagine hitPlatform becoming a boolean variable in that case, or possibly more involved if it results in some specification of which objects have collided. In either case, I don't see anything that would make any difference based on the outcome of this check. If it isn't a check, but a statement that these things are "collidable" (for lack of a better word), then it wouldn't need to be restated with every loop, right?
+
+	//Another question/point here: Are sprites treated as rectangular blocks, or on a pixel-by-pixel basis? If I had a round sprite would it still interact with things as though it was rectangular, or would the roundness make a difference? <- This should be answered somewhere soon if the tutorial is written with the expectation that a new programmer will need to know a few more of the details for an effective game!
+
+	// Incidentally, it does look like it's testing the player versus all platforms here, which suggests that the platforms themselves might be intangible to one another. I'll probably find this out shortly.
+
+	//  Reset the players velocity (movement)
+    player.body.velocity.x = 0;
+
+    if (cursors.left.isDown)
+    {
+        //  Move to the left
+        player.body.velocity.x = -150;
+
+        player.animations.play('left');
+    }
+    else if (cursors.right.isDown)
+    {
+        //  Move to the right
+        player.body.velocity.x = 150;
+
+        player.animations.play('right');
+    }
+    else
+    {
+        //  Stand still
+        player.animations.stop();
+
+        player.frame = 4;
+    }
+    
+    //  Allow the player to jump if they are touching the ground.
+    if (cursors.up.isDown && player.body.touching.down)
+    {
+        player.body.velocity.y = -350;
+        //I'm not sure how this reconciles with the gravity added earlier. The effect is to jump, slow down, and fall again, so does this just amount to a momentary burst of velocity?
+    }
+
+    // check for collisions between stars and platforms....
+    game.physics.arcade.collide(stars, platforms);
+
+    // Ok, so there's a difference between 'overlapping' and 'colliding' with something? Other than checking whether things are occupying the same area (for field effects), I'm not sure why this is needed, as it seems to me that (for this case) collision should be sufficient...nevertheless, this funciton also seems to have a "in case this is true" component, calling the 'collectStar' function when it occurs, as well as hinting at the the 'this' reference I anticipated earlier. Can collide not do something similar? I don't get the null value here though, as the function appears to expect a value... more over there.
+    game.physics.arcade.overlap(player, stars, collectStar, null, this);
+}
+
+function collectStar(player, star) {
+	// remove the star from the screen
+	star.kill();
+	//continuing my commentary, what was the point in having two arguments here, particularly when one was passed as a null? Maybe this would matter if there were more than one player, but this tutorial hasn't gone anywhere near that yet (not that I don't want to see some of that--I'm curious if/how it can manage multiple input streams, either locally or over a network). Also, does 'killing' the star delete it, or just hide it? Is there a way to count how many stars there are?
+	// Now I just get a white screen. If the order matters here (i.e. if all collisions need to be checked before overlaps, or gravity before keyboard controls, etc.) then it would be nice to see that mentioned somewhere. As it is, my code should be the same as the example, just in the order of the tutorial rather than 'cleaned up' for display, and seems like it should work as is, but doesn't. Maybe I can find an error readout somewhere...
+	// update -- I had parenthesis instead of curly braces around this function, so it works now...still only giving me one star though.
+	// update 2 -- I had randon instead of random on the line for bouncing, and now it works. Interestingly, since I left the one platform as moveable, it falls with the stars and pushes the player through the ground, pinning them down, unable to jump!
+
+	score += 10;
+	scoreText.text = 'Score: ' + score;
+	//so I assume this overwrites whatever value was in text before, which also means it's automatically handling updating the screen each passthrough so there isn't leftover text from the previous pass. That is a nice feature (unless you want to print on top of previous text for some reason).
+	if (score >= 120){
+		scoreText.text = 'YAY! You won, Jeff!'
+	}
+
+}
+
+</script>
+
+</body>
+</html>
