@@ -1,0 +1,42 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+	<meta charset="UTF-8" />
+	<title>Phaser - Animation playground</title>
+	<script type="text/javascript" src="js/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+
+function preload() {
+	// import the purple tentacle!
+	this.game.load.atlas('pt', 'assets/purplet.png', 'assets/purplet.json');
+
+}
+
+function create() {
+	// create an instance of purple tentacle
+	this.sprite = game.add.sprite(game.world.centerX, 300, 'pt');
+
+	// give purple tentacle an animation called hopping
+	//this.sprite.animations.add('hopping', Phaser.Animation.generateFrameNames('purple_', 26, 32), 6, true);
+
+	this.sprite.animations.add('hopping', ['purple_26','purple_27','purple_28','purple_29','purple_30','purple_31', 'purple_32','purple_36','purple_37','purple_38','purple_39','purple_40','purple_41','purple_42'], 6, true);
+	this.sprite.animations.play('hopping');
+}
+
+function update() {
+	
+}
+
+</script>
+</body>
+</html>

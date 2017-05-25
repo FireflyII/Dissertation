@@ -1,0 +1,89 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+	<meta charset="UTF-8" />
+	<title>Phaser - Animation playground</title>
+	<script type="text/javascript" src="js/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+
+function preload() {
+	// import the purple tentacle!
+	game.load.spritesheet('purple', 'assets/pt_2x6.png', 398, 344);
+
+}
+var hp1;
+var hp2;
+var hp3;
+
+function create() {
+	// bring in Arcade Physics (for movement purposes)
+	game.physics.startSystem(Phaser.Physics.ARCADE);
+
+	// create an instance of purple tentacle
+	mysprite = this.game.add.sprite(15, 30, 'purple');
+	mysprite.frame = 3;
+
+	mysprite.scale.setTo(.25, .25);
+	// give purple tentacle an animation called hopping
+	mysprite.animations.add('hopping', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 10, true);
+	//mysprite.animations.play('hopping');
+
+	hp1 = mysprite.animations.add('hop1', [0, 1, 2, 3, 4, 5, 6], 10, false);
+	hp2 = mysprite.animations.add('hop2', [7, 8, 9], 10, false);
+	hp3 = mysprite.animations.add('hop3', [10, 11], 10, false);
+	//apply physics to purpleT
+	game.physics.arcade.enable(mysprite);
+
+	//start purpleT moving, but stop at the ends of the frame
+	mysprite.body.collideWorldBounds = true;
+	//mysprite.body.velocity.x = 150;
+	/*
+	mysprite.body.velocity.x = 0;
+	mysprite.animations.play('hop1');
+	mysprite.body.velocity.x = 150;
+	mysprite.animations.play('hop2');
+	mysprite.body.velocity.x = 0;
+	mysprite.animations.play('hop3');
+	*/
+	hp1.onComplete.add(hp1done, this);
+	hp2.onComplete.add(hp2done, this);
+	hp3.onComplete.add(hp3done, this);
+
+	mysprite.body.velocity.x = 0;
+	hp1.play(20, false);
+
+}
+
+function hp1done(sprite, animation){
+	sprite.body.velocity.x = 500;
+	hp2.play(20, false);
+}
+
+function hp2done(sprite, animation){
+	sprite.body.velocity.x = 0;
+	hp3.play(20, false);
+}
+
+function hp3done(sprite, animation){
+	sprite.body.velocity.x = 0;
+	hp1.play(20, false);
+}
+
+
+function update() {
+	
+}
+
+</script>
+</body>
+</html>
